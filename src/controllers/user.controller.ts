@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
-import { UserService } from '@/services/user.service';
-import { UserRole } from '@/types';
+import { User, UserService } from '@/services/user.service';
 
 export class UserController {
   private userService: UserService;
@@ -11,7 +10,12 @@ export class UserController {
 
   public getAllUsers = async (req: Request, res: Response): Promise<void> => {
     try {
-      const users = await this.userService.getAllUsers();
+      const { page, take, q } = req.query as any;
+      const users = await this.userService.getAllUsers({
+        page: Number(page),
+        take: Number(take),
+        where: q,
+      });
       res.status(200).json(users);
     } catch (error) {
       res.status(500).json({ message: 'Error fetching users', error });
@@ -20,7 +24,7 @@ export class UserController {
 
   public getUserById = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = req.params.id;
+      const userId = req.params.id as string;
       const user = await this.userService.getUserById(userId);
       if (user) {
         res.status(200).json(user);
@@ -44,7 +48,7 @@ export class UserController {
 
   public updateUser = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = req.params.id;
+      const userId = req.params.id as string;
       const userData = req.body;
       const updatedUser = await this.userService.updateUser(userId, userData);
       if (updatedUser) {
@@ -59,7 +63,7 @@ export class UserController {
 
   public deleteUser = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = req.params.id;
+      const userId = req.params.id as string;
       const deleted = await this.userService.deleteUser(userId);
       if (deleted) {
         res.status(200).json({ message: 'User deleted successfully' });
