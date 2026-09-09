@@ -16,12 +16,12 @@ export type User = z.infer<typeof userSchema>;
 export class UserService {
   public async getAllUsers(params: {
     page?: number;
-    take?: number;
+    limit?: number;
     where?: Partial<User>;
     orderBy?: { [key: string]: 'asc' | 'desc' };
-  }): Promise<User[]> {
-    const { page = 1, take = 10 } = params;
-    const skip = (page - 1) * take;
+  }): Promise<any> {
+    const { page = 1, limit = 10 } = params;
+    const skip = (page - 1) * limit || 0;
     const where = params.where ?
     {
         OR: Object.entries(params.where).map(([key, value]) => ({
@@ -37,10 +37,10 @@ export class UserService {
         createdAt: 'desc' as const,
     };
     const users = await prisma.user.findMany({
-      skip,
-      take,
-      where,
-      orderBy,
+        skip,
+        take: limit || 10,
+        where,
+        orderBy,
     });
     return users;
   }
