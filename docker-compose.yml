@@ -1,0 +1,33 @@
+services:
+  postgres:
+    platform: linux/amd64
+    image: postgis/postgis:15-3.4-alpine
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=prog-2
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d prog-2"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+  pgadmin:
+    platform: linux/amd64
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=michaelsoliveira@gmail.com
+      - PGADMIN_DEFAULT_PASSWORD=secret
+    ports:
+      - "8080:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
+  postgres_data:
