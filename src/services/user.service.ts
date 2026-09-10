@@ -1,6 +1,7 @@
 import { z } from "zod";
 import prisma from '@/lib/prisma';
 import { Prisma } from "@prisma/client";
+import { hashPassword } from "@/utils/password";
 
 export const userSchema = z.object({
   id: z.string().optional(),
@@ -58,11 +59,13 @@ export class UserService {
         const newUser = await prisma.user.create({
         data: {
             ...userData,
+            password: await hashPassword(userData.password),
             createdAt: new Date(),
             updatedAt: new Date(),
         },
         });
-        return newUser;
+        const { password, ...userWithoutPassword } = newUser;
+        return userWithoutPassword as User;
   }
 
   public async updateUser(
