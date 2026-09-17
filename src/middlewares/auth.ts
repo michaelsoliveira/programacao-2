@@ -1,6 +1,8 @@
 import { NextFunction, Request, Response } from "express";
-import { AppError, hasRole, UserRole } from "@/types";
+import { AppError, hasAnyRole, hasRole, UserRole } from "@/types";
 import prisma from "@/lib/prisma";
+import { toAuthUser } from "@/utils/user.mapper";
+import { verifyToken } from "@/utils/jwt";
 
 const userIncludeRoles = { roles: true} as const;
 
@@ -14,14 +16,47 @@ async function loadAuthUser(userId: string) {
         throw new AppError("User not found", 404);
     }
 
-    return user;
+    return toAuthUser(user);
 }
 
-export function requireRole(role: UserRole) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!hasRole(req.user, role)) {
-      return res.status(403).json({ error: "Access denied" });
+export async function authenticate(
+    req: Request, 
+    res: Response, 
+    next: NextFunction
+) {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            throw new AppError("Token de autenticação não informado", 401);
+        }
+
+        const token = authHeader.slice('Bearer '.length).trim();
+        const payload = verifyToken(token);
+
+        req.user = await loadAuthUser(payload.sub);
+        next();
+    } catch (error) {
+        if (error instanceof AppError) {
+            next(error);
+            return;
+        }
+        next(new AppError("Erro ao autenticar usuário", 401));
     }
-    next();
-  };
+}
+
+export function authorize(...roles: UserRole[]) {
+    return (req: Request, res: Response, next: NextFunction) => {
+        try {
+            if (!req.user) {
+                next(new AppError("Usuário não autenticado", 401));
+            }
+
+            if (roles.length > 0 && !hasAnyRole(req.user, roles)) {
+                next(new AppError("Sem permissão para este recurso", 403));
+            }
+            next();
+        } catch (error) {
+            next(error);
+        } 
+    }
 }
