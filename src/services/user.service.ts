@@ -57,6 +57,35 @@ export class UserService {
     public async createUser(
         userData: Omit<User, "id" | "createdAt" | "updatedAt">
     ): Promise<User> {
+      const userParsed = userSchema.safeParse(userData);
+      if (!userParsed.success) {
+        throw userParsed.error;
+      }
+      const { name, email, password } = userParsed.data;
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+      });
+      if (existingUser) {
+        throw new Error("Email already exists");
+      }
+      const hashedPassword = await hashPassword(password);
+      const newUser = await prisma.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+      const { password: _, ...userWithoutPassword } = newUser;
+      return userWithoutPassword as User;
+  }
+
+  public async createUserWithHashedPassword(
+    userData: Omit<User, "id" | "createdAt" | "updatedAt">
+  ): Promise<User> {
+    const userParsed = userSchema
         const newUser = await prisma.user.create({
         data: {
             ...userData,

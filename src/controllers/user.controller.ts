@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { z, ZodError } from 'zod';
 import { User, UserService } from '@/services/user.service';
 
 export class UserController {
@@ -43,7 +44,15 @@ export class UserController {
       const newUser = await this.userService.createUser(userData);
       res.status(201).json(newUser);
     } catch (error) {
-      res.status(500).json({ message: 'Error creating user', error });
+      if (error instanceof ZodError) {
+        res.status(400).json({
+          message: 'Validation error',
+          errors: z.flattenError(error).fieldErrors,
+        });
+        return;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      res.status(500).json({ message: 'Error creating user', error: message });
     }
   };
 
